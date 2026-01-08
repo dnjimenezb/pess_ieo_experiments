@@ -20,14 +20,14 @@ def generate_boxplot(n_items, indicator):
 
     :return: Creates a .pdf file with the boxplot chart present in the manuscript.
     """
-    path_report = os.path.join("output", "final_stats", "ni_%i"%n_items)
+    path_report = os.path.join("output", "figures_12", "final_stats", "ni_%i"%n_items)
     df_report = pd.read_csv(os.path.join(path_report, "final_stats.csv"))
     deg_list = [1, 3, 5]
     labelsize = 20
     space = 0.15
     if n_items == 10:
         legend = ['LR', 'SPO+', 'SPO+(CH)', 'IEO']
-        methods = ['LR', 'SPOp', 'SPOp(CH)', 'IEO']
+        methods = ['LR', 'SPOp', 'SPOpCH', 'IEO']
         position = [-1.5, -0.5, 0.5, 1.5]
         colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
     elif n_items == 20:
