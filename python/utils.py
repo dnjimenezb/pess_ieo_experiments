@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 import os
+import re
 
 
 def check_folder(output_path, new_folder):
@@ -49,6 +50,7 @@ def charge_zk(n_samples, zk_np, zk, zk_new):
     """Check whether the visited point is already included in the zk dict.
        If yes, include it. Otherwise, omit it"""
     update_flag = True
+    added_points = 0
     if np.sum(zk_np) == 0:
         for i in range(n_samples):
             zk[(i, 0)] = zk_new[i, :]
@@ -68,8 +70,34 @@ def charge_zk(n_samples, zk_np, zk, zk_new):
             if flag:
                 zk[(i, NK_i)] = zk_new[i, :]
                 zk_np[i] += 1
+                added_points += 1
 
         if sk == n_samples:
             update_flag = False
 
-    return update_flag, zk, zk_np
+    return update_flag, zk, zk_np, added_points
+
+def check_inst_delta(filename, allowed_inst, allowed_delta):
+    """ Checks whether the current instance should be tested"""
+    pattern = r"inst(\d+).*delta(\d+)"
+    match = re.search(pattern, filename)
+
+    if not match:
+        return False  # pattern not found
+
+    inst_val = int(match.group(1))
+    delta_val = int(match.group(2))
+
+    return inst_val in allowed_inst and delta_val in allowed_delta
+
+def save_performance_file(ieo_loss, n_cuts, mip_gap, ns, timelimit, method, output_folder='', instance_name=''):
+    """ Saves the performance metrics displayed in Table 1"""
+    df = pd.DataFrame([{
+        "ieo_loss": ieo_loss,
+        "n_cuts": n_cuts,
+        "mip_gap": mip_gap
+    }])
+    filename = os.path.join(output_folder, instance_name + '_' + method + '_ns%i'%ns + '_tl%i'%timelimit + '_per.csv')
+    df.to_csv(filename, index=False)
+
+    return 0

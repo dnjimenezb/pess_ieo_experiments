@@ -1,5 +1,7 @@
 """Module containing the functions used to execute the out-of-sample experiments
 """
+from xmlrpc.client import Boolean
+
 from data_reading import *
 from utils import *
 import argparse
@@ -27,7 +29,7 @@ def get_method_os(b_method, costs, features, weights, capacity):
 
     return results_array
 
-def do_out_of_sample_tests(n_items, ns_train, ns_test):
+def do_out_of_sample_tests(n_items, ns_train, ns_test, inst_list, delta_list, table_23):
     """
     Execute the out-of-sample experiments for all the tested methods.
 
@@ -38,35 +40,50 @@ def do_out_of_sample_tests(n_items, ns_train, ns_test):
     :return: Create .csv files containing the out-of-sample losses for each method
     """
     methods = ['bLR', 'bSPOp', 'bSPOpCH', 'bIEO']
+    kk = 0
     instances_folder = os.path.join("data", "ni_%i"%n_items, "train", "ns_%i"%ns_train)
-    b_matrices_folder = os.path.join("output", "b_matrices", "ni_%i"%n_items, "ns_%i"%ns_train)
-    output_folder_list = ["output", "out_of_sample_results", "ni_%i"%n_items, "ns_%i"%ns_train]
-    save_path = check_folder_path(output_folder_list)
     train_instances = os.listdir(instances_folder)
+    if table_23:
+        instances_folder_no_lhs = os.path.join("data", "ni_%i" % n_items, "no_lhs_data")
+        train_instances_no_lhs = os.listdir(instances_folder_no_lhs)
+        n_inst_lhs = len(inst_list) * len(delta_list)
+        train_instances += train_instances_no_lhs
+        b_matrices_folder = os.path.join("output", "table_23_res", "b_matrices", "ns_%i" % ns_train)
+        output_folder_list = ["output", "table_23_res", "out_of_sample_results", "ns_%i" % ns_train]
+    else:
+        b_matrices_folder = os.path.join("output", "figures_12",  "b_matrices", "ni_%i"%n_items, "ns_%i"%ns_train)
+        output_folder_list = ["output", "figures_12", "out_of_sample_results", "ni_%i"%n_items, "ns_%i"%ns_train]
+    save_path = check_folder_path(output_folder_list)
     for instance in train_instances:
-        print('###########################################')
-        print('... Out-of-sample experiments for instance:', instance)
-        print('###########################################')
-        path_data = os.path.join(instances_folder, instance)
-        _, n_features, b_gt, deg, eps, weights, capacity = read_data(path_data, ns_train, mode='test')
-        instance_name = instance.split('.')[0]
-        features_test, costs_test = gen_test_samples(ns_test, n_items, n_features, b_gt, deg, eps)
-        df_results = pd.DataFrame()
-        for method in methods:
-            print('.... Solving for method:', method)
-            try:
-                b_method_path = os.path.join(b_matrices_folder, instance_name + '_' + method + '.csv')
-                b_method_matrix = pd.read_csv(b_method_path).values
-                df_results[method] = get_method_os(b_method_matrix, costs_test, features_test, weights, capacity)
-            except:
-                print('Method matrix (' + method + ') not found for instance ' + instance_name + ', skipping...')
+        if check_inst_delta(instance, inst_list, delta_list):
+            print('###########################################')
+            print('... Out-of-sample experiments for instance:', instance)
+            print('###########################################')
+            if table_23 and kk >= n_inst_lhs:
+                path_data = os.path.join(instances_folder_no_lhs, instance)
+                kk += 1
+            else:
+                path_data = os.path.join(instances_folder, instance)
+                kk += 1
+            _, n_features, b_gt, deg, eps, weights, capacity = read_data(path_data, ns_train, mode='test')
+            instance_name = instance.split('.')[0]
+            features_test, costs_test = gen_test_samples(ns_test, n_items, n_features, b_gt, deg, eps)
+            df_results = pd.DataFrame()
+            for method in methods:
+                print('.... Solving for method:', method)
+                try:
+                    b_method_path = os.path.join(b_matrices_folder, instance_name + '_' + method + '.csv')
+                    b_method_matrix = pd.read_csv(b_method_path).values
+                    df_results[method] = get_method_os(b_method_matrix, costs_test, features_test, weights, capacity)
+                except:
+                    print('Method matrix (' + method + ') not found for instance ' + instance_name + ', skipping...')
 
-        df_path = os.path.join(save_path, instance_name + '_out_of_sample.csv')
-        df_results.to_csv(df_path, index=True)
+            df_path = os.path.join(save_path, instance_name + '_out_of_sample.csv')
+            df_results.to_csv(df_path, index=True)
 
     return 0
 
-def construct_final_report(n_items, ns_train_array):
+def construct_final_report(n_items, ns_train_array, inst_list, delta_list, table_23):
     """
     Construct the final report of different metrics for the out-of-sample experiments
 
@@ -85,41 +102,65 @@ def construct_final_report(n_items, ns_train_array):
     df_final_report = pd.DataFrame(columns=cols)
     k = 0
     for ns_train in ns_train_array:
+        kk = 0
         instances_folder = os.path.join("data", "ni_%i" % n_items, "train", "ns_%i" % ns_train)
-        b_matrices_folder = os.path.join("output", "b_matrices", "ni_%i" % n_items, "ns_%i" % ns_train)
-        out_of_sample_folder = os.path.join("output", "out_of_sample_results", "ni_%i" % n_items, "ns_%i" % ns_train)
         train_instances = os.listdir(instances_folder)
+        if table_23:
+            instances_folder_no_lhs = os.path.join("data", "ni_%i" % n_items, "no_lhs_data")
+            train_instances_no_lhs = os.listdir(instances_folder_no_lhs)
+            n_inst_lhs = len(inst_list) * len(delta_list)
+            train_instances += train_instances_no_lhs
+            b_matrices_folder = os.path.join("output", "table_23_res", "b_matrices", "ns_%i" % ns_train)
+            out_of_sample_folder = os.path.join("output", "table_23_res", "out_of_sample_results", "ns_%i" % ns_train)
+        else:
+            b_matrices_folder = os.path.join("output", "figures_12", "b_matrices", "ni_%i" % n_items, "ns_%i" % ns_train)
+            out_of_sample_folder = os.path.join("output", "figures_12", "out_of_sample_results", "ni_%i" % n_items, "ns_%i" % ns_train)
         for instance in train_instances:
-            path_data = os.path.join(instances_folder, instance)
-            _, n_features, features, costs, weights, capacity = read_data(path_data, ns_train, mode='train')
-            current_row = dict()
-            elements = instance.split('_')
-            instance_name = instance.split('.')[0]
-            path_out_of_sample = os.path.join(out_of_sample_folder, instance_name + '_out_of_sample.csv')
-            df_out_of_sample = pd.read_csv(path_out_of_sample)
-            current_row['N. Samples'] = ns_train
-            current_row['Cap/Tot_weight'] = str(capacity) + '/' + str(np.sum(weights))
-            current_row['N. Instance'] = elements[1].replace('inst', '')
-            current_row['N. Items'] = n_items
-            current_row['N. Features'] = n_features
-            current_row['Delta'] = elements[4].replace('delta', '')
-            current_row['Eps'] = elements[5].replace('eps', '')
-            for method in methods:
-                try:
-                    b_method_path = os.path.join(b_matrices_folder, instance_name + '_' + method + '.csv')
-                    b_method = pd.read_csv(b_method_path).values
-                    method_objval = get_objective_value(b_method, ns_train, weights, capacity, costs, features)
-                    current_row['Mean in-sample loss' + ' (' + method + ')'] = get_percentage_loss(method_objval)
-                    current_row['Mean out-of-sample loss' + ' (' + method + ')'] = np.mean(df_out_of_sample[method].values)
-                    current_row['StdDev out-of-sample loss' + ' (' + method + ')'] = np.std(df_out_of_sample[method].values)
-                except:
-                    print('Out of samples results for method :', method, ' not found for instance: ', instance, ', skipping...')
+            if check_inst_delta(instance, inst_list, delta_list):
+                if table_23 and kk >= n_inst_lhs:
+                    path_data = os.path.join(instances_folder_no_lhs, instance)
+                    kk += 1
+                else:
+                    path_data = os.path.join(instances_folder, instance)
+                    kk += 1
+                _, n_features, features, costs, weights, capacity = read_data(path_data, ns_train, mode='train')
+                current_row = dict()
+                elements = instance.split('_')
+                instance_name = instance.split('.')[0]
+                path_out_of_sample = os.path.join(out_of_sample_folder, instance_name + '_out_of_sample.csv')
+                df_out_of_sample = pd.read_csv(path_out_of_sample)
+                current_row['N. Samples'] = ns_train
+                current_row['Cap/Tot_weight'] = str(capacity) + '/' + str(np.sum(weights))
+                if table_23 and kk > n_inst_lhs:
+                    current_row['N. Instance'] = elements[1].replace('inst', '')
+                    current_row['Delta'] = elements[5].replace('delta', '')
+                    current_row['Eps'] = elements[6].replace('eps', '')
+                else:
+                    current_row['N. Instance'] = elements[1].replace('inst', '') + '_lhs'
+                    current_row['Delta'] = elements[4].replace('delta', '')
+                    current_row['Eps'] = elements[5].replace('eps', '')
+                current_row['N. Items'] = n_items
+                current_row['N. Features'] = n_features
+                for method in methods:
+                    try:
+                        b_method_path = os.path.join(b_matrices_folder, instance_name + '_' + method + '.csv')
+                        b_method = pd.read_csv(b_method_path).values
+                        method_objval = get_objective_value(b_method, ns_train, weights, capacity, costs, features)
+                        current_row['Mean in-sample loss' + ' (' + method + ')'] = get_percentage_loss(method_objval)
+                        current_row['Mean out-of-sample loss' + ' (' + method + ')'] = np.mean(df_out_of_sample[method].values)
+                        current_row['StdDev out-of-sample loss' + ' (' + method + ')'] = np.std(df_out_of_sample[method].values)
+                    except:
+                        print('Out of samples results for method :', method, ' not found for instance: ', instance, ', skipping...')
 
-            df_final_report.loc[k] = pd.Series(current_row)
-            k += 1
+                df_final_report.loc[k] = pd.Series(current_row)
+                k += 1
 
-    path_final_report_list = ["output", "final_stats", "ni_%i" % n_items]
-    path_final_report = check_folder_path(path_final_report_list)
+    if table_23:
+        path_final_report_list = ["output", "table_23_res"]
+        path_final_report = check_folder_path(path_final_report_list)
+    else:
+        path_final_report_list = ["output", "figures_12", "final_stats", "ni_%i" % n_items]
+        path_final_report = check_folder_path(path_final_report_list)
     df_final_report.to_csv(os.path.join(path_final_report,"final_stats.csv"), index=False)
 
     return 0
@@ -130,15 +171,22 @@ if __name__ == '__main__':
     parser.add_argument("--n_items", type=int, default=10, help="Number of knapsack items (10 or 20)")
     parser.add_argument("--ns_train", nargs="+", type=int, default=[100, 200, 300, 400, 500],
                         help="Training samples (100, 200, 300, 400 or 500)")
+    parser.add_argument("--instances", nargs="+", type=int, default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                        help="Instances to test (from 0 to 10)")
+    parser.add_argument("--delta", nargs="+", type=int, default=[1, 3, 5], help="Values of delta to test (1, 3 or 5)")
     parser.add_argument("--ns_test", type=int, default=1000, help="Number of test samples")
+    parser.add_argument("--table_23", type=bool, default=False, help="Performing experiments for displaying tables 2 and 3")
     args = parser.parse_args()
     n_items = args.n_items
     ns_test = args.ns_test
     ns_train_array = args.ns_train
+    inst_list = args.instances
+    delta_list = args.delta
+    table_23 = args.table_23
     for ns_train in ns_train_array:
         do_out_of_sample_tests(
-            n_items, ns_train, ns_test
+            n_items, ns_train, ns_test, inst_list, delta_list, table_23
         )
     construct_final_report(
-        n_items, ns_train_array
+        n_items, ns_train_array, inst_list, delta_list, table_23
     )
