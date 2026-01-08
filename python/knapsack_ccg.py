@@ -62,6 +62,7 @@ class KnapsackCCG:
         self.c_gap = 100
         self.lb = 0
         self.ub = 1
+        self.n_cuts = 0
 
     def construct_master_base(self):
         """Create the Gurobi MILP model used for the master problem"""
@@ -139,11 +140,14 @@ class KnapsackCCG:
         self.get_db_solution(db)
         self.get_zs_solution(zs)
 
-        return model.objVal, db, zs
+        return model.ObjBound, db, zs
 
     def update_bounds(self, cub, clb):
         """Update current lower and upper bounds"""
-        self.ub = cub * (self.ub > cub) + self.ub * (self.ub < cub)
+        print('self.ub', self.ub)
+        print('cub', cub)
+        if self.ub > cub:
+            self.ub = cub
         if clb > self.lb:
             self.lb = clb
             self.b_sol = self.cb_sol
@@ -154,8 +158,9 @@ class KnapsackCCG:
         """Update the dictionary containing the current visited extreme points"""
         update = False
         for sol in zk_solutions.keys():
-            updated, self.zk, self.zk_np = charge_zk(self.n_samples, self.zk_np, self.zk, zk_solutions[sol])
+            updated, self.zk, self.zk_np, added_cuts = charge_zk(self.n_samples, self.zk_np, self.zk, zk_solutions[sol])
             update = update or updated
+            self.n_cuts += added_cuts
 
         return update
 
@@ -170,13 +175,13 @@ class KnapsackCCG:
             cub, db, zs = self.solve_mp()
             for i in range(self.n_samples):
                 self.predictions[i, :] = get_predictions(self.cb_sol, self.features[i, :])
-            sol_sp, clb = get_bilevel_feasible(self.mp_sol, 0, self.costs, self.predictions, self.weights, self.capacity, 1)
+            sol_sp, clb = get_bilevel_feasible(self.mp_sol, self.eps, self.costs, self.predictions, self.weights, self.capacity, 1)
             updated = self.update_zk(sol_sp)
             self.update_bounds(cub, clb)
-            self.c_gap = 100 * (self.ub - self.lb) / self.ub
+            self.c_gap = (self.ub - self.lb) / self.lb
             print('UB = ', self.ub)
             print('LB = ', self.lb)
-            print('rGAP = ' + str(self.c_gap))
+            print('rGAP = ' + str(100 * self.c_gap))
             elapsed_time = time.time() - start_time
             n_iter += 1
             if elapsed_time > self.time_limit:
@@ -184,7 +189,7 @@ class KnapsackCCG:
             if not updated:
                 print(' ----- Early stopping: No new solutions added ...')
 
-        return self.b_sol
+        return self.b_sol, self.lb, self.n_cuts, self.c_gap
 
 
 def solve_ieo_knapsack_ccg(features_matrix, costs_matrix, weights_vector, capacity, b_fixed, opt_cost_matrix, opt_sol_matrix,
@@ -223,6 +228,6 @@ def solve_ieo_knapsack_ccg(features_matrix, costs_matrix, weights_vector, capaci
                                b_fixed, epsilon_pessimistic, bigM_pessimistic, b_min, b_max, lasso_reg_param, zk_initial,
                                n_cuts_b_random, alpha_b_random, time_limit, maximum_iterations, gap_tolerance)
 
-    b_sol = exp_instance.execute_ccg()
+    b_sol, obj_val, n_cuts, mip_gap = exp_instance.execute_ccg()
 
-    return b_sol
+    return b_sol, obj_val, n_cuts, mip_gap

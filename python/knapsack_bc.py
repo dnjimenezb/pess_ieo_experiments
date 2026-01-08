@@ -61,6 +61,7 @@ class MPCallback:
         self.db_sol = np.zeros((self.n_samples, self.n_items))
         self.db_dict = dict()
         self.zs_dict = dict()
+        self.n_lazy_cuts = 0
 
     def __call__(self, model, where):
         """Identify the conditions to add a cut and add it if needed"""
@@ -75,6 +76,7 @@ class MPCallback:
         if add_lazy_cut:
             try:
                 self.add_violated_constraints(model, cut_type)
+                model._lazy_cut_count = self.n_lazy_cuts
             except Exception:
                 logging.exception("Exception occurred in callback")
                 model.terminate()
@@ -106,6 +108,7 @@ class MPCallback:
                 self.db_sol = db_gen
                 self.current_best_objval = objective_value
                 model.cbLazy(gp.quicksum(self.theta[i] for i in range(self.n_samples)) / self.n_samples >= objective_value)
+                #self.n_lazy_cuts += 1
 
         return 0
 
@@ -157,6 +160,7 @@ class MPCallback:
             self.bz_prod[i] / self.opt_cost[i] - gp.quicksum((self.bx[(i, j)] / self.opt_cost[i]) * z_new[j]
                                                              for j in range(self.n_items))
             >= - self.bigM * (1 - self.lbd[i, k]) + self.eps)
+        self.n_lazy_cuts += 1
 
         return 0
 
@@ -320,7 +324,9 @@ def solve_ieo_knapsack_bc(features_matrix, costs_matrix, weights_vector, capacit
         #Check which of the solutions gets a better loss, if discrepancies are found
         if obj_val_1 > obj_val_2:
             b_sol_final = b_sol_1
+            obj_val_final = obj_val_1
         else:
             b_sol_final = b_sol_2
+            obj_val_final = obj_val_2
 
-        return b_sol_final
+        return b_sol_final, obj_val_final, m._lazy_cut_count, m.MIPGap
