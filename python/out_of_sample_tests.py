@@ -70,13 +70,14 @@ def do_out_of_sample_tests(n_items, ns_train, ns_test, inst_list, delta_list, ta
             features_test, costs_test = gen_test_samples(ns_test, n_items, n_features, b_gt, deg, eps)
             df_results = pd.DataFrame()
             for method in methods:
-                print('.... Solving for method:', method)
                 try:
                     b_method_path = os.path.join(b_matrices_folder, instance_name + '_' + method + '.csv')
                     b_method_matrix = pd.read_csv(b_method_path).values
                     df_results[method] = get_method_os(b_method_matrix, costs_test, features_test, weights, capacity)
+                    print('.... Solving for method:', method)
                 except:
-                    print('Method matrix (' + method + ') not found for instance ' + instance_name + ', skipping...')
+                    #print('Method matrix (' + method + ') not found for instance ' + instance_name + ', skipping...')
+                    continue
 
             df_path = os.path.join(save_path, instance_name + '_out_of_sample.csv')
             df_results.to_csv(df_path, index=True)
