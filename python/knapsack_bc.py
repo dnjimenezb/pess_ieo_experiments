@@ -310,6 +310,10 @@ def solve_ieo_knapsack_bc(features_matrix, costs_matrix, weights_vector, capacit
                         zs=zs, db=db, theta=theta, lbd=lbd, u=u, zk_initial=zk_initial, n_try=n_cuts_b_random,
                         alpha=alpha_b_random)
         m.optimize(cb)
+        max_zk_count = int(np.max(cb.zk_np))
+        print('Max. number of added points: ', max_zk_count)
+        assert max_zk_count < max_number_points, \
+            f"max_zk_count ({max_zk_count}) reached/exceeded max_number_points ({max_number_points})"
 
         # Get the solutions
         b_sol_1 = np.zeros((n_items, n_features))
