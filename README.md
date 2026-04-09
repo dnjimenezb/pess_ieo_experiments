@@ -41,10 +41,13 @@ pip install -r requirements.txt
 Experiments consist of three main parts: computing IEO predictors, performing out-of-sample testing, and displaying the desired tables and charts.  
 All output files are saved in the `output` folder.
 
+⚠️ **Important**: The experiments are designed to be executed **sequentially**. In particular, the IEO matrices must be computed before running out-of-sample tests, 
+as the latter depend on the former. While parallelization can be used to solve individual instances, full experiment pipelines (e.g., reproducing tables and figures) require that all intermediate results be available beforehand.
+
 ### Computing IEO predictors
 
 Experiments can be run from the root folder by executing the script `solve_ieo.py` using the commands listed below.  
-The script computes the \(\mathbf{W}\) matrices described in Section 4 for each of the tested methods. These matrices are saved in the `b_matrices` subfolder, where additional subfolders indicate the number of knapsack items and the number of training samples used.
+The script computes the $\mathbf{W}$ matrices described in Section 4 for each of the tested methods. These matrices are saved in the `b_matrices` subfolder, where additional subfolders indicate the number of knapsack items and the number of training samples used.
 
 Please note that running all the experiments presented in the paper may take a considerable amount of time. This script also computes linear regression and SPO+ predictors.
 
@@ -169,3 +172,7 @@ python ./python/solve_ieo.py --n_items 20 --n_samples 100 200 300 400 --method b
 python ./python/out_of_sample_tests.py --n_items 20 --ns_train 100 200 300 400 --ns_test 1000
 python ./python/gen_plot.py --n_items 20
 ```
+
+### Notes
+- Some method-instance combinations are intentionally skipped due to known limitations (e.g., SPO+ with convex hull inequalities for certain instances). These are not errors.
+- Previous versions of the code displayed messages for skipped instances; these have been removed to avoid confusion.
