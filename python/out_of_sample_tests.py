@@ -1,6 +1,5 @@
 """Module containing the functions used to execute the out-of-sample experiments
 """
-from xmlrpc.client import Boolean
 
 from data_reading import *
 from utils import *
@@ -151,7 +150,8 @@ def construct_final_report(n_items, ns_train_array, inst_list, delta_list, table
                         current_row['Mean out-of-sample loss' + ' (' + method + ')'] = np.mean(df_out_of_sample[method].values)
                         current_row['StdDev out-of-sample loss' + ' (' + method + ')'] = np.std(df_out_of_sample[method].values)
                     except:
-                        print('Out of samples results for method :', method, ' not found for instance: ', instance, ', skipping...')
+                        #print('Out of samples results for method :', method, ' not found for instance: ', instance, ', skipping...')
+                        continue
 
                 df_final_report.loc[k] = pd.Series(current_row)
                 k += 1
