@@ -3,8 +3,9 @@ IEO matrices computation, and out-of-sample experimentation
 should be executed first.
 """
 import pandas as pd
+import os
 
-stats_file_path = "output/table_23_res/final_stats.csv"
+stats_file_path = os.path.join("output", "table_23_res", "final_stats.csv")
 df = pd.read_csv(stats_file_path)
 
 # Columns to be displayed
