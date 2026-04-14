@@ -54,7 +54,7 @@ for c_timelimit in timelimit:
         k = 0
         instances_folder = os.path.join("data", "ni_%i"%n_items, "train", "ns_%i"%ns_train)
         train_instances = os.listdir(instances_folder)
-        exp_params['max_number_points'] = min(2^n_items, int(10E6/ns_train))   ## choice of maximum number of points
+        exp_params['max_number_points'] = min(2**n_items, int(1E6/ns_train))   ## choice of maximum number of points
         if table_1:
             output_folder_list = ["output", "table_1_res"]
         elif table_23:
